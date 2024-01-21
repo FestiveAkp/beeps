@@ -1,0 +1,81 @@
+<html>
+    <head>
+        <title>Smoke Detector Beeps</title>
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+        <style>
+            @media (prefers-color-scheme: dark) {
+              body {
+                background-color: #1B1B1B;
+                color: #E7E8EB;
+              }
+              a {
+                color: #3387CC;
+              }
+            }
+          </style>
+    </head>
+    <body>
+        <h1>Smoke Detector Beeps</h1>
+        <div x-data="{ isPlaying: false, interval: null }">
+            <button 
+                @click="isPlaying = !isPlaying"
+                x-init="$watch('isPlaying', onIsPlayingChange)"
+                x-text="isPlaying ? 'Stop ⏹' : 'Start ⏵'"
+            ></button>
+            <div id="color" style="margin-top: 12px; height: 50px; width: 50px; background-color:red;"></div>
+        </div>
+    </body>
+    <script>
+        /**
+         * Run a callback at randomized intervals.
+         * @see {@link https://stackoverflow.com/a/60308175}
+         * 
+         * @param {() => void} intervalFunction
+         * @param {number} minDelay
+         * @param {number} maxDelay
+         */
+        function setRandomInterval(intervalFunction, minDelay, maxDelay) {
+            let timeout;
+
+            const runInterval = () => {
+                const timeoutFunction = () => {
+                    intervalFunction();
+                    runInterval();
+                };
+
+                const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
+
+                timeout = setTimeout(timeoutFunction, delay);
+            };
+
+            runInterval();
+
+            return {
+                clear() { clearTimeout(timeout) },
+            };
+        };
+
+        function onInterval() {
+            const randomColor = Math.floor(Math.random() * 16777215).toString(16);
+            document.getElementById('color').style.backgroundColor = randomColor;
+            
+            const audio = new Audio('./public/Beeps-filtered.mp3');
+            audio.play();
+        }
+
+        /**
+         * @param {boolean} isPlaying
+        */
+        function onIsPlayingChange(isPlaying) {
+            if (isPlaying) {
+                interval = setRandomInterval(
+                    onInterval,
+                    8000,
+                    14000,
+                );
+            } else {
+                interval.clear();
+            }
+        }
+    </script>
+</html>
