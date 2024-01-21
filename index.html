@@ -1,9 +1,12 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Smoke Detector Beeps</title>
         <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
         <style>
+            /* https://gist.github.com/kekru/3600e9306417bfc28eb16722dd406de0 */
             @media (prefers-color-scheme: dark) {
                 body {
                     background-color: #1b1b1b;
@@ -13,23 +16,56 @@
                     color: #3387cc;
                 }
             }
+
+            [x-cloak] {
+                display: none !important;
+            }
+
+            .icon {
+                height: 1rem;
+            }
+
+            .button {
+                display: flex;
+                align-items: center;
+                gap: 2px;
+            }
         </style>
     </head>
     <body>
         <h1>Smoke Detector Beeps</h1>
+        <p>Simulate the comforting sound of low-battery smoke detectors in your home.</p>
         <div x-data>
-            <div>
-                <span>Smoke Detectors:</span>
-                <span x-text="$store.beeps.detectors.length"></span>
-                <button
-                    :disabled="$store.beeps.isPlaying"
-                    @click="$store.beeps.detectors.push(new Detector($store.beeps.detectors.length))"
-                >
-                    +
-                </button>
-                <button :disabled="$store.beeps.isPlaying" @click="$store.beeps.detectors.pop()">−</button>
+            <div style="display: flex; align-items: center; gap: 8px">
+                <span>Smoke Detectors: <span x-text="$store.beeps.detectors.length"></span> </span>
+                <div style="display: flex; gap: 4px">
+                    <button
+                        :disabled="$store.beeps.isPlaying"
+                        @click="$store.beeps.detectors.push(new Detector($store.beeps.detectors.length))"
+                        class="button"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon">
+                            <title>plus</title>
+                            <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+                        </svg>
+                    </button>
+                    <button :disabled="$store.beeps.isPlaying" @click="$store.beeps.detectors.pop()" class="button">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon">
+                            <title>minus</title>
+                            <path d="M19,13H5V11H19V13Z" />
+                        </svg>
+                    </button>
+                </div>
             </div>
-            <div>
+            <div style="margin-top: 4px">
+                <label for="minDelay">Min Delay (seconds):</label>
+                <input id="minDelay" x-model.number="$store.beeps.minDelaySeconds" type="number" style="width: 50px" />
+            </div>
+            <div style="margin-top: 4px">
+                <label for="maxDelay">Max Delay (seconds):</label>
+                <input id="maxDelay" x-model.number="$store.beeps.maxDelaySeconds" type="number" style="width: 50px" />
+            </div>
+            <div style="margin-top: 4px">
                 <span>Stop After:</span>
                 <select x-model.number="$store.beeps.stopAfter" :disabled="$store.beeps.isPlaying">
                     <option value="never">Never</option>
@@ -40,10 +76,31 @@
                     <option value="12">12 hours</option>
                 </select>
             </div>
-            <div style="margin-top: 12px">
-                <button x-show="!$store.beeps.isPlaying" @click="$store.beeps.startPlaying()">Start ⏵</button>
-                <button x-show="$store.beeps.isPlaying" @click="$store.beeps.stopPlaying()">Stop ⏹</button>
-                <button @click="playSound()">Tap ♪</button>
+            <hr />
+            <div style="display: flex; gap: 8px; margin-top: 12px">
+                <button x-show="!$store.beeps.isPlaying" @click="$store.beeps.startPlaying()" class="button">
+                    <span>Start</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon">
+                        <title>play</title>
+                        <path d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+                    </svg>
+                </button>
+                <button x-show="$store.beeps.isPlaying" @click="$store.beeps.stopPlaying()" x-cloak class="button">
+                    Stop
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon">
+                        <title>stop</title>
+                        <path d="M18,18H6V6H18V18Z" />
+                    </svg>
+                </button>
+                <button @click="playSound()" class="button">
+                    Tap
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon">
+                        <title>music</title>
+                        <path
+                            d="M21,3V15.5A3.5,3.5 0 0,1 17.5,19A3.5,3.5 0 0,1 14,15.5A3.5,3.5 0 0,1 17.5,12C18.04,12 18.55,12.12 19,12.34V6.47L9,8.6V17.5A3.5,3.5 0 0,1 5.5,21A3.5,3.5 0 0,1 2,17.5A3.5,3.5 0 0,1 5.5,14C6.04,14 6.55,14.12 7,14.34V6L21,3Z"
+                        />
+                    </svg>
+                </button>
             </div>
 
             <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px">
@@ -54,9 +111,6 @@
         </div>
     </body>
     <script>
-        const MIN_DELAY = 10000;
-        const MAX_DELAY = 20000;
-
         class Detector {
             constructor(id = 0) {
                 this.id = id;
@@ -65,45 +119,10 @@
             }
         }
 
-        document.addEventListener('alpine:init', () => {
-            Alpine.store('beeps', {
-                isPlaying: false,
-                detectors: [new Detector(0), new Detector(1)],
-                stopAfter: 'never',
-                stopAfterTimeout: null,
-
-                startPlaying() {
-                    this.isPlaying = true;
-
-                    this.detectors.forEach((detector) => {
-                        detector.interval = setRandomInterval(
-                            () => {
-                                const randomColor = Math.floor(Math.random() * 16777215).toString(16);
-                                detector.backgroundColor = '#' + randomColor;
-                                playSound();
-                            },
-                            MIN_DELAY,
-                            MAX_DELAY
-                        );
-                    });
-
-                    if (this.stopAfter !== 'never') {
-                        const duration = parseInt(this.stopAfter) * 1000 * 60 * 60;
-                        this.stopAfterTimeout = setTimeout(() => {
-                            Alpine.store('beeps').stopPlaying();
-                        }, duration);
-                    }
-                },
-
-                stopPlaying() {
-                    this.detectors.forEach((detector) => {
-                        detector.interval.clear();
-                    });
-                    this.isPlaying = false;
-                    clearTimeout(this.stopAfterTimeout);
-                },
-            });
-        });
+        function playSound() {
+            const audio = new Audio('./public/Beeps-filtered.mp3');
+            audio.play();
+        }
 
         /**
          * Run a callback at randomized intervals.
@@ -136,9 +155,46 @@
             };
         }
 
-        function playSound() {
-            const audio = new Audio('./public/Beeps-filtered.mp3');
-            audio.play();
-        }
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('beeps', {
+                isPlaying: false,
+                detectors: [new Detector(0), new Detector(1)],
+                minDelaySeconds: 10,
+                maxDelaySeconds: 20,
+                stopAfter: 'never',
+                stopAfterTimeout: null,
+
+                startPlaying() {
+                    this.isPlaying = true;
+
+                    this.detectors.forEach((detector) => {
+                        detector.interval = setRandomInterval(
+                            () => {
+                                const randomColor = Math.floor(Math.random() * 16777215).toString(16);
+                                detector.backgroundColor = '#' + randomColor;
+                                playSound();
+                            },
+                            this.minDelaySeconds * 1000,
+                            this.maxDelaySeconds * 1000
+                        );
+                    });
+
+                    if (this.stopAfter !== 'never') {
+                        const duration = parseInt(this.stopAfter) * 1000 * 60 * 60;
+                        this.stopAfterTimeout = setTimeout(() => {
+                            Alpine.store('beeps').stopPlaying();
+                        }, duration);
+                    }
+                },
+
+                stopPlaying() {
+                    this.detectors.forEach((detector) => {
+                        detector.interval.clear();
+                    });
+                    this.isPlaying = false;
+                    clearTimeout(this.stopAfterTimeout);
+                },
+            });
+        });
     </script>
 </html>
