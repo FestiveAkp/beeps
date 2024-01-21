@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
     <head>
         <title>Smoke Detector Beeps</title>
@@ -16,16 +17,41 @@
     </head>
     <body>
         <h1>Smoke Detector Beeps</h1>
-        <div x-data="{ isPlaying: false, interval: null }">
+        <div x-data="{ isPlaying: false, detectors: [new Detector(0), new Detector(1)] }">
+            <div>
+                <span>Smoke Detectors:</label>
+                <span x-text="detectors.length"></span>
+                <button :disabled="isPlaying" @click="detectors.push(new Detector(detectors.length))">+</button>
+                <button :disabled="isPlaying" @click="detectors.pop()">-</button>
+            </div>
             <button 
                 @click="isPlaying = !isPlaying"
-                x-init="$watch('isPlaying', onIsPlayingChange)"
+                x-init="$watch('isPlaying', (isPlaying) => onIsPlayingChange(isPlaying, detectors))"
                 x-text="isPlaying ? 'Stop ⏹' : 'Start ⏵'"
+                style="margin-top: 4px;"
             ></button>
-            <div id="color" style="margin-top: 12px; height: 50px; width: 50px; background-color:red;"></div>
+            <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px;">
+                <template x-for="detector in detectors" :key="detector.id">
+                    <div 
+                        style="height: 50px; width: 50px;" 
+                        :style="{ backgroundColor: detector.backgroundColor }"
+                    ></div>
+                </template>
+            </div>
         </div>
     </body>
     <script>
+        const MIN_DELAY = 10000;
+        const MAX_DELAY = 20000;
+
+        class Detector {
+            constructor(id = 0) {
+                this.id = id;
+                this.interval = null;
+                this.backgroundColor = 'red';
+            }
+        }
+
         /**
          * Run a callback at randomized intervals.
          * @see {@link https://stackoverflow.com/a/60308175}
@@ -55,26 +81,29 @@
             };
         };
 
-        function onInterval() {
-            const randomColor = Math.floor(Math.random() * 16777215).toString(16);
-            document.getElementById('color').style.backgroundColor = randomColor;
-            
-            const audio = new Audio('./public/Beeps-filtered.mp3');
-            audio.play();
-        }
-
         /**
          * @param {boolean} isPlaying
+         * @param {Detector[]} detectors
         */
-        function onIsPlayingChange(isPlaying) {
+        function onIsPlayingChange(isPlaying, detectors) {
             if (isPlaying) {
-                interval = setRandomInterval(
-                    onInterval,
-                    8000,
-                    14000,
-                );
+                detectors.forEach(detector => {
+                    detector.interval = setRandomInterval(
+                        () => {
+                            const randomColor = Math.floor(Math.random() * 16777215).toString(16);
+                            detector.backgroundColor = '#' + randomColor;
+                            
+                            const audio = new Audio('./public/Beeps-filtered.mp3');
+                            audio.play();
+                        },
+                        MIN_DELAY,
+                        MAX_DELAY,
+                    );
+                });
             } else {
-                interval.clear();
+                detectors.forEach(detector => {
+                    detector.interval.clear();
+                });
             }
         }
     </script>
