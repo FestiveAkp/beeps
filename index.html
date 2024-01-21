@@ -2,10 +2,7 @@
 <html>
     <head>
         <title>Smoke Detector Beeps</title>
-        <script
-            defer
-            src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
-        ></script>
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
         <style>
             @media (prefers-color-scheme: dark) {
                 body {
@@ -20,42 +17,38 @@
     </head>
     <body>
         <h1>Smoke Detector Beeps</h1>
-        <div
-            x-data="{ isPlaying: false, detectors: [new Detector(0), new Detector(1)] }"
-        >
+        <div x-data>
             <div>
                 <span>Smoke Detectors:</span>
-                <span x-text="detectors.length"></span>
+                <span x-text="$store.beeps.detectors.length"></span>
                 <button
-                    :disabled="isPlaying"
-                    @click="detectors.push(new Detector(detectors.length))"
+                    :disabled="$store.beeps.isPlaying"
+                    @click="$store.beeps.detectors.push(new Detector($store.beeps.detectors.length))"
                 >
                     +
                 </button>
-                <button :disabled="isPlaying" @click="detectors.pop()">
-                    −
-                </button>
+                <button :disabled="$store.beeps.isPlaying" @click="$store.beeps.detectors.pop()">−</button>
             </div>
-            <button
-                @click="isPlaying = !isPlaying"
-                x-init="$watch('isPlaying', (isPlaying) => onIsPlayingChange(isPlaying, detectors))"
-                x-text="isPlaying ? 'Stop ⏹' : 'Start ⏵'"
-                style="margin-top: 4px"
-            ></button>
-            <button @click="playSound()">Tap ♪</button>
-            <div
-                style="
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 12px;
-                    margin-top: 12px;
-                "
-            >
-                <template x-for="detector in detectors" :key="detector.id">
-                    <div
-                        style="height: 50px; width: 50px"
-                        :style="{ backgroundColor: detector.backgroundColor }"
-                    ></div>
+            <div>
+                <span>Stop After:</span>
+                <select x-model.number="$store.beeps.stopAfter" :disabled="$store.beeps.isPlaying">
+                    <option value="never">Never</option>
+                    <option value="1">1 hour</option>
+                    <option value="2">2 hours</option>
+                    <option value="3">3 hours</option>
+                    <option value="6">6 hours</option>
+                    <option value="12">12 hours</option>
+                </select>
+            </div>
+            <div style="margin-top: 12px">
+                <button x-show="!$store.beeps.isPlaying" @click="$store.beeps.startPlaying()">Start ⏵</button>
+                <button x-show="$store.beeps.isPlaying" @click="$store.beeps.stopPlaying()">Stop ⏹</button>
+                <button @click="playSound()">Tap ♪</button>
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px">
+                <template x-for="detector in $store.beeps.detectors" :key="detector.id">
+                    <div style="height: 50px; width: 50px" :style="{ backgroundColor: detector.backgroundColor }"></div>
                 </template>
             </div>
         </div>
@@ -71,6 +64,46 @@
                 this.backgroundColor = 'red';
             }
         }
+
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('beeps', {
+                isPlaying: false,
+                detectors: [new Detector(0), new Detector(1)],
+                stopAfter: 'never',
+                stopAfterTimeout: null,
+
+                startPlaying() {
+                    this.isPlaying = true;
+
+                    this.detectors.forEach((detector) => {
+                        detector.interval = setRandomInterval(
+                            () => {
+                                const randomColor = Math.floor(Math.random() * 16777215).toString(16);
+                                detector.backgroundColor = '#' + randomColor;
+                                playSound();
+                            },
+                            MIN_DELAY,
+                            MAX_DELAY
+                        );
+                    });
+
+                    if (this.stopAfter !== 'never') {
+                        const duration = parseInt(this.stopAfter) * 1000 * 60 * 60;
+                        this.stopAfterTimeout = setTimeout(() => {
+                            Alpine.store('beeps').stopPlaying();
+                        }, duration);
+                    }
+                },
+
+                stopPlaying() {
+                    this.detectors.forEach((detector) => {
+                        detector.interval.clear();
+                    });
+                    this.isPlaying = false;
+                    clearTimeout(this.stopAfterTimeout);
+                },
+            });
+        });
 
         /**
          * Run a callback at randomized intervals.
@@ -89,9 +122,7 @@
                     runInterval();
                 };
 
-                const delay =
-                    Math.floor(Math.random() * (maxDelay - minDelay + 1)) +
-                    minDelay;
+                const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
 
                 timeout = setTimeout(timeoutFunction, delay);
             };
@@ -108,32 +139,6 @@
         function playSound() {
             const audio = new Audio('./public/Beeps-filtered.mp3');
             audio.play();
-        }
-
-        /**
-         * @param {boolean} isPlaying
-         * @param {Detector[]} detectors
-         */
-        function onIsPlayingChange(isPlaying, detectors) {
-            if (isPlaying) {
-                detectors.forEach((detector) => {
-                    detector.interval = setRandomInterval(
-                        () => {
-                            const randomColor = Math.floor(
-                                Math.random() * 16777215
-                            ).toString(16);
-                            detector.backgroundColor = '#' + randomColor;
-                            playSound();
-                        },
-                        MIN_DELAY,
-                        MAX_DELAY
-                    );
-                });
-            } else {
-                detectors.forEach((detector) => {
-                    detector.interval.clear();
-                });
-            }
         }
     </script>
 </html>
